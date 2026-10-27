@@ -247,6 +247,14 @@ export function classifyClientError(
     };
   }
 
+  if (httpStatus === 404) {
+    return {
+      code: 'NETWORK_ERROR',
+      message:
+        'Chat API endpoint (/api/chat/stream) was not found. If running inside an Android APK, set VITE_API_BASE_URL to your hosted backend URL.',
+    };
+  }
+
   const raw = err instanceof Error ? err.message : String(err);
   const lower = raw.toLowerCase();
 
@@ -323,6 +331,15 @@ export function parseSSEBuffer(buffer: string): {
   }
 
   return { events, remaining };
+}
+
+export function resolveApiEndpoint(path: string, baseUrl?: string): string {
+  const cleanPath = path.startsWith('/') ? path : `/${path}`;
+  const trimmedBase = (baseUrl || '').trim().replace(/\/+$/, '');
+  if (!trimmedBase) {
+    return cleanPath;
+  }
+  return `${trimmedBase}${cleanPath}`;
 }
 
 export function createId(): string {

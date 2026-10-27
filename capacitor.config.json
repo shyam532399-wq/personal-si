@@ -1,0 +1,9 @@
+{
+  "appId": "com.geminichat.app",
+  "appName": "Gemini Chat",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https",
+    "cleartext": true
+  }
+}

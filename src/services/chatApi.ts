@@ -4,6 +4,7 @@ import {
   classifyClientError,
   detectUserLanguage,
   parseSSEBuffer,
+  resolveApiEndpoint,
 } from '../utils/chatUtils';
 
 export interface StreamCallbacks {
@@ -24,9 +25,14 @@ export async function streamChatCompletion(
     ? detectUserLanguage(lastUserMessage.content)
     : 'en';
 
+  const endpoint = resolveApiEndpoint(
+    '/api/chat/stream',
+    import.meta.env.VITE_API_BASE_URL,
+  );
+
   let response: Response;
   try {
-    response = await fetch('/api/chat/stream', {
+    response = await fetch(endpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

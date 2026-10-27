@@ -8,6 +8,7 @@ import {
   parseSSEBuffer,
   prepareEditAndResendHistory,
   prepareRegenerateHistory,
+  resolveApiEndpoint,
 } from './chatUtils';
 import type { ChatMessage } from '../types/chat';
 
@@ -108,8 +109,25 @@ test('parseSSEBuffer handles split TCP chunks without losing events', () => {
   assert.equal(res2.remaining, '');
 });
 
-test('classifyClientError categorizes 429, network, and safety errors accurately', () => {
+test('classifyClientError categorizes 429, 404 APK hint, network, and safety errors accurately', () => {
   assert.equal(classifyClientError(new Error('Quota exceeded'), 429).code, 'RATE_LIMIT');
   assert.equal(classifyClientError(new TypeError('Failed to fetch')).code, 'NETWORK_ERROR');
   assert.equal(classifyClientError(new Error('Blocked due to SAFETY')).code, 'BLOCKED');
+  const notFound = classifyClientError(new Error('Not Found'), 404);
+  assert.equal(notFound.code, 'NETWORK_ERROR');
+  assert.ok(notFound.message.includes('VITE_API_BASE_URL'));
 });
+
+test('resolveApiEndpoint supports default relative paths and hosted backend URLs for APK builds', () => {
+  assert.equal(resolveApiEndpoint('/api/chat/stream'), '/api/chat/stream');
+  assert.equal(resolveApiEndpoint('/api/chat/stream', '   '), '/api/chat/stream');
+  assert.equal(
+    resolveApiEndpoint('/api/chat/stream', 'https://my-backend.run.app/'),
+    'https://my-backend.run.app/api/chat/stream',
+  );
+  assert.equal(
+    resolveApiEndpoint('api/chat/stream', 'http://192.168.1.10:3000'),
+    'http://192.168.1.10:3000/api/chat/stream',
+  );
+});
+
