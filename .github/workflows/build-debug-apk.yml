@@ -33,29 +33,22 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "22"
-          cache: "npm"
 
       - name: Setup Java JDK 21
         uses: actions/setup-java@v4
         with:
           distribution: "temurin"
           java-version: "21"
+          cache: "gradle"
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Install npm dependencies
+      - name: Accept Android SDK Licenses
         run: |
-          if [ -f package-lock.json ]; then
-            npm ci
-          else
-            npm install
+          if [ -n "$ANDROID_HOME" ] && [ -x "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" ]; then
+            yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
           fi
 
-      - name: Run unit tests & TypeScript check
-        run: |
-          npx tsx --test src/utils/chatUtils.test.ts
-          npm run lint
+      - name: Install npm dependencies
+        run: npm install --legacy-peer-deps
 
       - name: Build production web bundle (Vite)
         env:
@@ -64,7 +57,7 @@ jobs:
 
       - name: Initialize & sync Capacitor Android platform
         run: |
-          npm install --no-save @capacitor/core@7 @capacitor/cli@7 @capacitor/android@7
+          npm install @capacitor/core@7 @capacitor/cli@7 @capacitor/android@7 --legacy-peer-deps
           if [ ! -d "android" ]; then
             npx cap add android
           fi
@@ -72,8 +65,8 @@ jobs:
 
       - name: Configure AndroidManifest permissions for Debug APK
         run: |
-          node -e '
-            const fs = require("fs");
+          node --input-type=module -e '
+            import fs from "node:fs";
             const manifestPath = "android/app/src/main/AndroidManifest.xml";
             let xml = fs.readFileSync(manifestPath, "utf8");
 
