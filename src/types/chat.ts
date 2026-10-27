@@ -9,6 +9,7 @@ export type ErrorCode =
   | 'BLOCKED'
   | 'AUTH_ERROR'
   | 'NETWORK_ERROR'
+  | 'BACKEND_REQUIRED'
   | 'API_ERROR';
 
 export interface ImageAttachment {
@@ -50,6 +51,7 @@ export interface AppSettings {
   temperature: number;
   systemInstruction: string;
   voiceLang: VoiceLang;
+  apiBaseUrl?: string;
 }
 
 export interface ModelOption {

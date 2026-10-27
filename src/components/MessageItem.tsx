@@ -5,6 +5,7 @@ import {
   Copy,
   Pencil,
   RefreshCw,
+  Settings,
   ShieldAlert,
   Sparkles,
   WifiOff,
@@ -19,11 +20,13 @@ interface MessageItemProps {
   onRegenerate: (assistantMessageId: string) => void;
   onEditAndResend: (userMessageId: string, newContent: string) => void;
   onRetryError: (assistantMessageId: string, overrideModel?: ModelId) => void;
+  onOpenSettings?: () => void;
 }
 
 function getErrorIcon(code: ErrorCode) {
   switch (code) {
     case 'NETWORK_ERROR':
+    case 'BACKEND_REQUIRED':
       return <WifiOff className="h-4 w-4 text-red-600 dark:text-red-400 shrink-0" />;
     case 'BLOCKED':
       return <ShieldAlert className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0" />;
@@ -38,6 +41,8 @@ function getErrorHeading(code: ErrorCode): string {
       return 'Rate limit reached (429)';
     case 'BLOCKED':
       return 'Response filtered';
+    case 'BACKEND_REQUIRED':
+      return 'Backend server URL required';
     case 'NETWORK_ERROR':
       return 'Network connection error';
     case 'AUTH_ERROR':
@@ -54,6 +59,7 @@ export function MessageItem({
   onRegenerate,
   onEditAndResend,
   onRetryError,
+  onOpenSettings,
 }: MessageItemProps) {
   const [copied, setCopied] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -248,6 +254,19 @@ export function MessageItem({
                     <RefreshCw className="h-3.5 w-3.5" />
                     <span>Retry</span>
                   </button>
+
+                  {(message.error.code === 'BACKEND_REQUIRED' ||
+                    message.error.code === 'NETWORK_ERROR') &&
+                    onOpenSettings && (
+                      <button
+                        type="button"
+                        onClick={onOpenSettings}
+                        className="inline-flex items-center gap-1.5 rounded-full border border-slate-300 bg-white px-3.5 py-1.5 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-blue-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800 whitespace-nowrap shrink-0"
+                      >
+                        <Settings className="h-3.5 w-3.5" />
+                        <span>Open Settings</span>
+                      </button>
+                    )}
 
                   {message.model === 'gemini-4-argon' &&
                     (message.error.code === 'RATE_LIMIT' ||

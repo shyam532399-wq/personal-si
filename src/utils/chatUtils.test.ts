@@ -5,6 +5,7 @@ import {
   classifyClientError,
   detectUserLanguage,
   generateAutoTitle,
+  normalizeApiBaseUrl,
   parseSSEBuffer,
   prepareEditAndResendHistory,
   prepareRegenerateHistory,
@@ -109,25 +110,40 @@ test('parseSSEBuffer handles split TCP chunks without losing events', () => {
   assert.equal(res2.remaining, '');
 });
 
-test('classifyClientError categorizes 429, 404 APK hint, network, and safety errors accurately', () => {
+test('classifyClientError categorizes 429, 404 BACKEND_REQUIRED, network, and safety errors accurately', () => {
   assert.equal(classifyClientError(new Error('Quota exceeded'), 429).code, 'RATE_LIMIT');
   assert.equal(classifyClientError(new TypeError('Failed to fetch')).code, 'NETWORK_ERROR');
   assert.equal(classifyClientError(new Error('Blocked due to SAFETY')).code, 'BLOCKED');
   const notFound = classifyClientError(new Error('Not Found'), 404);
-  assert.equal(notFound.code, 'NETWORK_ERROR');
-  assert.ok(notFound.message.includes('VITE_API_BASE_URL'));
+  assert.equal(notFound.code, 'BACKEND_REQUIRED');
+  assert.ok(notFound.message.includes('Backend Server URL'));
 });
 
-test('resolveApiEndpoint supports default relative paths and hosted backend URLs for APK builds', () => {
-  assert.equal(resolveApiEndpoint('/api/chat/stream'), '/api/chat/stream');
-  assert.equal(resolveApiEndpoint('/api/chat/stream', '   '), '/api/chat/stream');
+test('normalizeApiBaseUrl and resolveApiEndpoint handle bare domains, accidental /api suffixes, and Settings override', () => {
+  assert.equal(normalizeApiBaseUrl('   '), '');
   assert.equal(
-    resolveApiEndpoint('/api/chat/stream', 'https://my-backend.run.app/'),
-    'https://my-backend.run.app/api/chat/stream',
+    normalizeApiBaseUrl('personal-si.onrender.com/api/chat/stream/'),
+    'https://personal-si.onrender.com',
   );
   assert.equal(
-    resolveApiEndpoint('api/chat/stream', 'http://192.168.1.10:3000'),
-    'http://192.168.1.10:3000/api/chat/stream',
+    normalizeApiBaseUrl('192.168.1.10:3000/api'),
+    'http://192.168.1.10:3000',
+  );
+
+  assert.equal(resolveApiEndpoint('/api/chat/stream'), '/api/chat/stream');
+  assert.equal(resolveApiEndpoint('/api/chat/stream', '   ', ''), '/api/chat/stream');
+  assert.equal(
+    resolveApiEndpoint('/api/chat/stream', '', 'https://env-backend.run.app/'),
+    'https://env-backend.run.app/api/chat/stream',
+  );
+  assert.equal(
+    resolveApiEndpoint(
+      'api/chat/stream',
+      'https://custom-backend.onrender.com/api/chat/stream',
+      'https://env-backend.run.app/',
+    ),
+    'https://custom-backend.onrender.com/api/chat/stream',
   );
 });
+
 

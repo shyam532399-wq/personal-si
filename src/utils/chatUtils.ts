@@ -247,11 +247,11 @@ export function classifyClientError(
     };
   }
 
-  if (httpStatus === 404) {
+  if (httpStatus === 404 || httpStatus === 405) {
     return {
-      code: 'NETWORK_ERROR',
+      code: 'BACKEND_REQUIRED',
       message:
-        'Chat API endpoint (/api/chat/stream) was not found. If running inside an Android APK, set VITE_API_BASE_URL to your hosted backend URL.',
+        'Chat API endpoint (/api/chat/stream) was not found. Open Settings and enter your deployed Backend Server URL (or set VITE_API_BASE_URL).',
     };
   }
 
@@ -333,13 +333,54 @@ export function parseSSEBuffer(buffer: string): {
   return { events, remaining };
 }
 
-export function resolveApiEndpoint(path: string, baseUrl?: string): string {
+/**
+ * Normalizes a user-supplied or env-supplied Backend Server URL:
+ * - trims whitespace and trailing slashes
+ * - strips accidental `/api/chat/stream` or `/api` suffixes so paths are not duplicated
+ * - prepends `http://` for local LAN/localhost hosts or `https://` for bare domain names
+ */
+export function normalizeApiBaseUrl(rawUrl?: string): string {
+  let cleaned = (rawUrl || '').trim();
+  if (!cleaned) {
+    return '';
+  }
+
+  cleaned = cleaned.replace(/\/+$/, '');
+  cleaned = cleaned.replace(/\/api\/chat\/stream$/i, '');
+  cleaned = cleaned.replace(/\/api$/i, '');
+  cleaned = cleaned.replace(/\/+$/, '');
+
+  if (!cleaned) {
+    return '';
+  }
+
+  if (!/^https?:\/\//i.test(cleaned) && !cleaned.startsWith('/')) {
+    const isLocalHost =
+      /^(localhost|127\.\d+\.\d+\.\d+|10\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+|172\.(1[6-9]|2\d|3[0-1])\.\d+\.\d+)(:\d+)?(\/|$)/i.test(
+        cleaned,
+      );
+    if (isLocalHost) {
+      cleaned = `http://${cleaned}`;
+    } else if (cleaned.includes('.')) {
+      cleaned = `https://${cleaned}`;
+    }
+  }
+
+  return cleaned;
+}
+
+export function resolveApiEndpoint(
+  path: string,
+  customBaseUrl?: string,
+  envBaseUrl?: string,
+): string {
   const cleanPath = path.startsWith('/') ? path : `/${path}`;
-  const trimmedBase = (baseUrl || '').trim().replace(/\/+$/, '');
-  if (!trimmedBase) {
+  const effectiveBase =
+    normalizeApiBaseUrl(customBaseUrl) || normalizeApiBaseUrl(envBaseUrl);
+  if (!effectiveBase) {
     return cleanPath;
   }
-  return `${trimmedBase}${cleanPath}`;
+  return `${effectiveBase}${cleanPath}`;
 }
 
 export function createId(): string {

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { ChevronDown, RotateCcw, X } from 'lucide-react';
 import { AVAILABLE_MODELS, DEFAULT_SYSTEM_INSTRUCTION } from '../constants/defaults';
 import type { AppSettings, ModelId, VoiceLang } from '../types/chat';
+import { normalizeApiBaseUrl } from '../utils/chatUtils';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -34,9 +35,11 @@ export function SettingsModal({ isOpen, settings, onClose, onSave }: SettingsMod
 
   const handleSave = () => {
     const cleanedInstruction = draft.systemInstruction.trim() || DEFAULT_SYSTEM_INSTRUCTION;
+    const cleanedApiBaseUrl = normalizeApiBaseUrl(draft.apiBaseUrl);
     onSave({
       ...draft,
       systemInstruction: cleanedInstruction,
+      apiBaseUrl: cleanedApiBaseUrl,
     });
     onClose();
   };
@@ -106,6 +109,45 @@ export function SettingsModal({ isOpen, settings, onClose, onSave }: SettingsMod
                 Note: Gemini Pro requires a billing-enabled API key in Settings &gt; Secrets.
               </p>
             )}
+          </div>
+
+          {/* Backend Server URL (for Android APK) */}
+          <div>
+            <div className="flex items-center justify-between">
+              <label
+                htmlFor="settings-api-base-url"
+                className="text-sm font-medium text-slate-800 dark:text-zinc-200"
+              >
+                Backend server URL (Android APK)
+              </label>
+              {(draft.apiBaseUrl || '').trim().length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setDraft((prev) => ({ ...prev, apiBaseUrl: '' }))}
+                  className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-200 whitespace-nowrap shrink-0"
+                >
+                  <RotateCcw className="h-3 w-3" />
+                  <span>Clear</span>
+                </button>
+              )}
+            </div>
+            <input
+              id="settings-api-base-url"
+              type="url"
+              inputMode="url"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              value={draft.apiBaseUrl || ''}
+              onChange={(e) =>
+                setDraft((prev) => ({ ...prev, apiBaseUrl: e.target.value }))
+              }
+              placeholder="https://your-app.onrender.com (leave blank on web)"
+              className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-500"
+            />
+            <p className="mt-1.5 text-xs leading-relaxed text-slate-500 dark:text-zinc-400">
+              Leave blank in a browser. Inside the Android APK, enter your deployed server URL so chat streams connect cleanly.
+            </p>
           </div>
 
           {/* Temperature Slider */}

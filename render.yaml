@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: gemini-chat-backend
+    runtime: node
+    plan: free
+    buildCommand: npm install --legacy-peer-deps && npm run build
+    startCommand: node --experimental-strip-types server.ts
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: 22.14.0
+      - key: GEMINI_API_KEY
+        sync: false

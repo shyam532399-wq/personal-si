@@ -24,11 +24,19 @@ export const AVAILABLE_MODELS: ModelOption[] = [
   },
 ];
 
+const ENV_API_BASE_URL =
+  typeof import.meta !== 'undefined' &&
+  import.meta.env &&
+  typeof import.meta.env.VITE_API_BASE_URL === 'string'
+    ? import.meta.env.VITE_API_BASE_URL.trim()
+    : '';
+
 export const DEFAULT_SETTINGS: AppSettings = {
   model: 'gemini-flash-latest',
   temperature: 0.7,
   systemInstruction: DEFAULT_SYSTEM_INSTRUCTION,
   voiceLang: 'en-IN',
+  apiBaseUrl: ENV_API_BASE_URL,
 };
 
 export const SUGGESTION_CHIPS: SuggestionChip[] = [

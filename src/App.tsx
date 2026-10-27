@@ -401,6 +401,7 @@ export default function App() {
                   onRetryError={(id, overrideModel) =>
                     void handleRetryError(id, overrideModel)
                   }
+                  onOpenSettings={() => setIsSettingsOpen(true)}
                 />
               ))}
               <div ref={messagesEndRef} className="h-2" />

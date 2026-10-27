@@ -25,9 +25,17 @@ export async function streamChatCompletion(
     ? detectUserLanguage(lastUserMessage.content)
     : 'en';
 
+  const envBaseUrl =
+    typeof import.meta !== 'undefined' &&
+    import.meta.env &&
+    typeof import.meta.env.VITE_API_BASE_URL === 'string'
+      ? import.meta.env.VITE_API_BASE_URL
+      : '';
+
   const endpoint = resolveApiEndpoint(
     '/api/chat/stream',
-    import.meta.env.VITE_API_BASE_URL,
+    settings.apiBaseUrl,
+    envBaseUrl,
   );
 
   let response: Response;
@@ -72,6 +80,17 @@ export async function streamChatCompletion(
         classifyClientError(new Error(`Request failed (${response.status})`), response.status),
       );
     }
+    return;
+  }
+
+  const contentType = (response.headers.get('content-type') || '').toLowerCase();
+  if (!contentType.includes('text/event-stream')) {
+    callbacks.onError({
+      code: 'BACKEND_REQUIRED',
+      message: endpoint.startsWith('/')
+        ? 'Backend server URL set nahi hai. Android APK mein chat chalane ke liye Settings khol kar apna deployed Backend Server URL (jaise https://your-app.onrender.com) save karein.'
+        : 'Is Backend Server URL se valid chat stream nahi mili (HTML page mila). Kripya Settings mein apna public deployed Backend URL check karein.',
+    });
     return;
   }
 

@@ -94,12 +94,17 @@ export function loadSettings(): AppSettings {
       parsed.voiceLang === 'hi-IN' || parsed.voiceLang === 'en-IN'
         ? parsed.voiceLang
         : DEFAULT_SETTINGS.voiceLang;
+    const apiBaseUrl =
+      typeof parsed.apiBaseUrl === 'string'
+        ? parsed.apiBaseUrl.trim()
+        : DEFAULT_SETTINGS.apiBaseUrl || '';
 
     return {
       model,
       temperature,
       systemInstruction,
       voiceLang,
+      apiBaseUrl,
     };
   } catch {
     return { ...DEFAULT_SETTINGS };
