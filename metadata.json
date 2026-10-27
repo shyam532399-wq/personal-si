@@ -1,0 +1,6 @@
+{
+  "name": "Gemini Chat",
+  "description": "A clean, minimal AI chat assistant with streaming responses, multimodal image analysis, multilingual voice input, and persistent conversation history.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
