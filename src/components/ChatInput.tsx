@@ -297,7 +297,7 @@ export function ChatInput({
         )}
 
         <label htmlFor="chat-prompt-input" className="sr-only">
-          Message Gemini
+          Message DEFAULTER AI
         </label>
         <textarea
           ref={textareaRef}
@@ -410,7 +410,7 @@ export function ChatInput({
       </div>
 
       <p className="mt-2 text-center text-[11px] text-slate-400 dark:text-zinc-500">
-        Gemini may display inaccurate info, so double-check important responses.
+        DEFAULTER AI may display inaccurate info, so double-check important responses.
       </p>
     </div>
   );

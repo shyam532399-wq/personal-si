@@ -82,7 +82,7 @@ export function SettingsModal({ isOpen, settings, onClose, onSave }: SettingsMod
               htmlFor="settings-model"
               className="block text-sm font-medium text-slate-800 dark:text-zinc-200"
             >
-              Gemini model
+              AI model
             </label>
             <div className="relative mt-2">
               <select

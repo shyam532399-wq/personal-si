@@ -146,4 +146,48 @@ test('normalizeApiBaseUrl and resolveApiEndpoint handle bare domains, accidental
   );
 });
 
+test('loadSettings defaults to DEFAULTER AI persona and upgrades legacy uncustomized system instruction', async () => {
+  const { DEFAULT_SYSTEM_INSTRUCTION, LEGACY_DEFAULT_SYSTEM_INSTRUCTION } = await import(
+    '../constants/defaults'
+  );
+  const { loadSettings } = await import('./storage');
+
+  assert.ok(DEFAULT_SYSTEM_INSTRUCTION.startsWith('You are DEFAULTER AI'));
+
+  const store = new Map<string, string>();
+  const prevStorage = globalThis.localStorage;
+  Object.defineProperty(globalThis, 'localStorage', {
+    configurable: true,
+    value: {
+      getItem: (k: string) => store.get(k) ?? null,
+      setItem: (k: string, v: string) => store.set(k, v),
+      removeItem: (k: string) => store.delete(k),
+    },
+  });
+
+  try {
+    // 1. Fresh install gets DEFAULTER AI instruction
+    assert.equal(loadSettings().systemInstruction, DEFAULT_SYSTEM_INSTRUCTION);
+
+    // 2. Legacy default instruction upgrades automatically to DEFAULTER AI
+    store.set(
+      'gemini_chat_settings_v1',
+      JSON.stringify({ systemInstruction: LEGACY_DEFAULT_SYSTEM_INSTRUCTION }),
+    );
+    assert.equal(loadSettings().systemInstruction, DEFAULT_SYSTEM_INSTRUCTION);
+
+    // 3. Custom user instruction is preserved untouched
+    store.set(
+      'gemini_chat_settings_v1',
+      JSON.stringify({ systemInstruction: 'Custom coding mentor persona' }),
+    );
+    assert.equal(loadSettings().systemInstruction, 'Custom coding mentor persona');
+  } finally {
+    Object.defineProperty(globalThis, 'localStorage', {
+      configurable: true,
+      value: prevStorage,
+    });
+  }
+});
+
 

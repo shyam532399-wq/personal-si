@@ -1,4 +1,4 @@
-import { DEFAULT_SETTINGS } from '../constants/defaults';
+import { DEFAULT_SETTINGS, LEGACY_DEFAULT_SYSTEM_INSTRUCTION } from '../constants/defaults';
 import type { AppSettings, ChatSession, ThemeMode } from '../types/chat';
 
 const SESSIONS_KEY = 'gemini_chat_sessions_v1';
@@ -87,7 +87,9 @@ export function loadSettings(): AppSettings {
         ? Math.min(2, Math.max(0, parsed.temperature))
         : DEFAULT_SETTINGS.temperature;
     const systemInstruction =
-      typeof parsed.systemInstruction === 'string' && parsed.systemInstruction.trim().length > 0
+      typeof parsed.systemInstruction === 'string' &&
+      parsed.systemInstruction.trim().length > 0 &&
+      parsed.systemInstruction.trim() !== LEGACY_DEFAULT_SYSTEM_INSTRUCTION
         ? parsed.systemInstruction
         : DEFAULT_SETTINGS.systemInstruction;
     const voiceLang =

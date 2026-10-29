@@ -1,7 +1,10 @@
 import type { AppSettings, ModelOption, SuggestionChip } from '../types/chat';
 
-export const DEFAULT_SYSTEM_INSTRUCTION =
+export const LEGACY_DEFAULT_SYSTEM_INSTRUCTION =
   "You are a helpful, honest and friendly AI assistant. Answer clearly and concisely in the user's language. If the user writes in Hinglish, reply in Hinglish. Use markdown for formatting and code.";
+
+export const DEFAULT_SYSTEM_INSTRUCTION =
+  "You are DEFAULTER AI, a helpful, honest and friendly AI assistant. Answer clearly and concisely in the user's language. If the user writes in Hinglish, reply in Hinglish. Use markdown for formatting and code.";
 
 export const AVAILABLE_MODELS: ModelOption[] = [
   {

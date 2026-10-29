@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import http from 'http';
 import express from 'express';
 import type { Request, Response } from 'express';
 import path from 'path';
@@ -19,7 +20,7 @@ const ALLOWED_MODELS = new Set([
 const DEFAULT_MODEL = 'gemini-flash-latest';
 
 const DEFAULT_SYSTEM_INSTRUCTION =
-  "You are a helpful, honest and friendly AI assistant. Answer clearly and concisely in the user's language. If the user writes in Hinglish, reply in Hinglish. Use markdown for formatting and code.";
+  "You are DEFAULTER AI, a helpful, honest and friendly AI assistant. Answer clearly and concisely in the user's language. If the user writes in Hinglish, reply in Hinglish. Use markdown for formatting and code.";
 
 interface IncomingAttachment {
   mimeType: string;
@@ -40,7 +41,7 @@ interface StreamChatBody {
   detectedLanguage?: 'hi' | 'hinglish' | 'en';
 }
 
-function getGeminiClient(): GoogleGenAI {
+function getGeminiClient(maxAttempts = 1): GoogleGenAI {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey || apiKey === 'MY_GEMINI_API_KEY') {
     throw new Error('API_KEY_MISSING: Gemini API key is not configured in Settings > Secrets.');
@@ -50,6 +51,11 @@ function getGeminiClient(): GoogleGenAI {
     httpOptions: {
       headers: {
         'User-Agent': 'aistudio-build',
+      },
+      retryOptions: {
+        attempts: maxAttempts,
+        initialDelay: 0.4,
+        maxDelay: 1.5,
       },
     },
   });
@@ -153,8 +159,32 @@ function isTransientOverloadError(err: unknown): boolean {
     upper.includes('503') ||
     upper.includes('UNAVAILABLE') ||
     upper.includes('HIGH DEMAND') ||
-    upper.includes('OVERLOADED')
+    upper.includes('OVERLOADED') ||
+    upper.includes('429') ||
+    upper.includes('RESOURCE_EXHAUSTED') ||
+    upper.includes('404') ||
+    upper.includes('NOT_FOUND')
   );
+}
+
+function buildCandidateModels(requestedModel: string): string[] {
+  if (requestedModel === 'gemini-flash-latest' || requestedModel === 'gemini-3.8-flash') {
+    return [
+      requestedModel,
+      'gemini-3.1-flash-lite',
+      'gemini-3-flash-preview',
+      'gemini-3.6-flash',
+    ];
+  }
+  if (requestedModel === 'gemini-3.1-flash-lite') {
+    return [
+      'gemini-3.1-flash-lite',
+      'gemini-flash-latest',
+      'gemini-3-flash-preview',
+      'gemini-3.6-flash',
+    ];
+  }
+  return [requestedModel];
 }
 
 function buildEffectiveSystemInstruction(
@@ -171,9 +201,21 @@ function buildEffectiveSystemInstruction(
   return trimmed;
 }
 
+function resolvePort(): number {
+  const portFlagIdx = process.argv.indexOf('--port');
+  if (portFlagIdx !== -1 && process.argv[portFlagIdx + 1]) {
+    const cliPort = Number(process.argv[portFlagIdx + 1]);
+    if (!Number.isNaN(cliPort) && cliPort > 0) {
+      return cliPort;
+    }
+  }
+  return Number(process.env.PORT) || 3000;
+}
+
 async function startServer() {
   const app = express();
-  const PORT = Number(process.env.PORT) || 3000;
+  const httpServer = http.createServer(app);
+  const PORT = resolvePort();
 
   app.use('/api', (req: Request, res: Response, next) => {
     const origin = req.headers.origin || '*';
@@ -259,30 +301,32 @@ async function startServer() {
 
     const clientAbortController = new AbortController();
     let clientDisconnected = false;
-    res.on('close', () => {
-      if (!res.writableEnded) {
+    const markDisconnected = () => {
+      if (!res.writableEnded && !clientDisconnected) {
         clientDisconnected = true;
         clientAbortController.abort();
       }
-    });
+    };
+    res.on('close', markDisconnected);
+    res.on('error', markDisconnected);
 
     const writeSSE = (payload: Record<string, unknown>) => {
       if (!clientDisconnected && !res.writableEnded) {
-        res.write(`data: ${JSON.stringify(payload)}\n\n`);
+        try {
+          res.write(`data: ${JSON.stringify(payload)}\n\n`);
+        } catch {
+          markDisconnected();
+        }
       }
     };
 
     try {
-      const ai = getGeminiClient();
       const systemInstruction = buildEffectiveSystemInstruction(
         body.systemInstruction,
         body.detectedLanguage,
       );
 
-      const candidateModels =
-        model === 'gemini-flash-latest'
-          ? ['gemini-flash-latest', 'gemini-3.1-flash-lite']
-          : [model];
+      const candidateModels = buildCandidateModels(model);
 
       let emittedAnyText = false;
       let blockedReason: string | undefined;
@@ -295,6 +339,7 @@ async function startServer() {
 
         const targetModel = candidateModels[attempt];
         const hasFallback = attempt < candidateModels.length - 1;
+        const ai = getGeminiClient(hasFallback ? 1 : 2);
         lastError = null;
         blockedReason = undefined;
 
@@ -309,7 +354,7 @@ async function startServer() {
                 timedOutWaitingForFirstToken = true;
                 attemptAbort.abort();
               }
-            }, 3500)
+            }, 3200)
           : null;
 
         try {
@@ -431,20 +476,24 @@ async function startServer() {
 
   if (process.env.NODE_ENV !== 'production') {
     const { createServer: createViteServer } = await import('vite');
+    const hmrDisabled = process.env.DISABLE_HMR === 'true';
     const vite = await createViteServer({
-      server: { middlewareMode: true },
+      server: {
+        middlewareMode: true,
+        hmr: hmrDisabled ? false : { server: httpServer },
+      },
       appType: 'spa',
     });
     app.use(vite.middlewares);
   } else {
     const distPath = path.join(__dirname, 'dist');
     app.use(express.static(distPath));
-    app.get('*', (_req: Request, res: Response) => {
+    app.use((_req: Request, res: Response) => {
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }
 
-  app.listen(PORT, '0.0.0.0', () => {
+  httpServer.listen(PORT, '0.0.0.0', () => {
     console.log(`Server listening on http://0.0.0.0:${PORT}`);
   });
 }

@@ -68,7 +68,7 @@ jobs:
             echo "sdk.dir=$ANDROID_HOME" > android/local.properties
           fi
 
-      - name: Configure AndroidManifest permissions for Debug APK
+      - name: Configure Android app name & Manifest permissions for Debug APK
         run: |
           node --input-type=module -e '
             import fs from "node:fs";
@@ -99,6 +99,15 @@ jobs:
             }
 
             fs.writeFileSync(manifestPath, xml, "utf8");
+
+            const stringsPath = "android/app/src/main/res/values/strings.xml";
+            if (fs.existsSync(stringsPath)) {
+              let stringsXml = fs.readFileSync(stringsPath, "utf8");
+              stringsXml = stringsXml
+                .replace(/<string name="app_name">.*?<\/string>/, "<string name=\"app_name\">DEFAULTER AI</string>")
+                .replace(/<string name="title_activity_main">.*?<\/string>/, "<string name=\"title_activity_main\">DEFAULTER AI</string>");
+              fs.writeFileSync(stringsPath, stringsXml, "utf8");
+            }
           '
 
       - name: Build Debug APK with Gradle
@@ -110,7 +119,7 @@ jobs:
       - name: Upload Debug APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: gemini-chat-debug-apk
+          name: DEFAULTER-AI-debug-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 30

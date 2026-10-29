@@ -214,7 +214,7 @@ export function MessageItem({
         {showTypingIndicator && (
           <div
             role="status"
-            aria-label="Gemini is generating a response"
+            aria-label="DEFAULTER AI is generating a response"
             className="inline-flex items-center gap-1.5 py-2.5"
           >
             <span className="typing-dot-1 h-2 w-2 rounded-full bg-blue-600 dark:bg-blue-400" />
